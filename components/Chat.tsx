@@ -1,20 +1,61 @@
 "use client";
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Volume2, VolumeX } from 'lucide-react';
 
 interface ChatProps {
-    chat: { user: "A" | "B"; message: string; language: string }[];
-  }
-  
-  const Chat: React.FC<ChatProps> = ({ chat })  => {
-    const [playingMessageId, setPlayingMessageId] = useState<number | null>(null);
+  chat: { user: "A" | "B"; message: string; language: string }[];
+}
+
+// Add proper types for WebKit AudioContext
+interface WebKitWindow extends Window {
+  webkitAudioContext: typeof AudioContext;
+}
+
+const Chat: React.FC<ChatProps> = ({ chat }) => {
+  const [playingMessageId, setPlayingMessageId] = useState<number | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioContext = useRef<AudioContext | null>(null);
+
+  // Initialize AudioContext on first user interaction
+  useEffect(() => {
+    const initAudioContext = () => {
+      if (!audioContext.current) {
+        const AudioContextConstructor = 
+          window.AudioContext || (window as unknown as WebKitWindow).webkitAudioContext;
+        audioContext.current = new AudioContextConstructor();
+      }
+      // Remove the event listeners after first interaction
+      document.removeEventListener('touchstart', initAudioContext);
+      document.removeEventListener('click', initAudioContext);
+    };
+
+    document.addEventListener('touchstart', initAudioContext);
+    document.addEventListener('click', initAudioContext);
+
+    return () => {
+      document.removeEventListener('touchstart', initAudioContext);
+      document.removeEventListener('click', initAudioContext);
+    };
+  }, []);
+
+  const stopCurrentAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      setPlayingMessageId(null);
+    }
+  };
 
   const handleSpeak = async (text: string, messageId: number) => {
     try {
-      // If there's already a message playing, stop it
-      if (playingMessageId !== null) {
-        setPlayingMessageId(null);
+      // If the same message is playing, stop it
+      if (playingMessageId === messageId) {
+        stopCurrentAudio();
+        return;
       }
+
+      // Stop any currently playing audio
+      stopCurrentAudio();
 
       const response = await fetch('/api/tts', {
         method: 'POST',
@@ -23,8 +64,7 @@ interface ChatProps {
         },
         body: JSON.stringify({
           text,
-          // Use different voices for different languages
-          voice: 'nova' // You can customize this based on preference
+          voice: 'nova'
         }),
       });
 
@@ -34,7 +74,15 @@ interface ChatProps {
 
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
+
+      // Clean up previous audio element
+      if (audioRef.current) {
+        URL.revokeObjectURL(audioRef.current.src);
+      }
+
+      // Create new audio element
       const audio = new Audio(audioUrl);
+      audioRef.current = audio;
 
       // Set up audio event handlers
       audio.onplay = () => setPlayingMessageId(messageId);
@@ -45,15 +93,25 @@ interface ChatProps {
       audio.onerror = () => {
         setPlayingMessageId(null);
         URL.revokeObjectURL(audioUrl);
+        console.error('Audio playback error');
       };
 
-      await audio.play();
+      // iOS requires user interaction to play audio
+      try {
+        // Resume AudioContext if it was suspended
+        if (audioContext.current?.state === 'suspended') {
+          await audioContext.current.resume();
+        }
+        await audio.play();
+      } catch (playError) {
+        console.error('Playback error:', playError);
+        setPlayingMessageId(null);
+      }
     } catch (error) {
       console.error('Error playing audio:', error);
       setPlayingMessageId(null);
     }
   };
-
 
   return (
     <div className="space-y-4">
@@ -83,7 +141,6 @@ interface ChatProps {
       ))}
     </div>
   );
-  };
-  
-  export default Chat;
-  
+};
+
+export default Chat;
