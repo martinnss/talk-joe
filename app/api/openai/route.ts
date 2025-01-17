@@ -22,9 +22,8 @@ export async function POST(request: NextRequest) {
     try {
         const formData = await request.formData();
         const audioFile = formData.get('audioData');
-        const targetLanguage = formData.get('targetLanguage');
 
-        if (!audioFile || !targetLanguage) {
+        if (!audioFile ) {
             return NextResponse.json(
                 { error: 'Missing required fields' },
                 { status: 400 }
@@ -43,9 +42,9 @@ export async function POST(request: NextRequest) {
 
         // 2. Translate the text
         const translation = await openai.chat.completions.create({
-            model: 'gpt-4',
+            model: 'gpt-4o-mini',
             messages: [
-                { role: 'system', content: `Translate the following text to ${targetLanguage}:` },
+                { role: 'system', content: `im going to give you a text, if its spanish translate it to english and if its english translate it to spanish. just give me the translation and nothing else` },
                 { role: 'user', content: transcription.text },
             ],
         }) as TranslationResponse;

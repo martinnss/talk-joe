@@ -16,7 +16,7 @@ export default function Home() {
       
       const formData = new FormData();
       formData.append('audioData', audioFile, 'audio.webm');
-      formData.append('targetLanguage', 'es');
+
       
       console.log('Sending audio file:', audioFile);
       
