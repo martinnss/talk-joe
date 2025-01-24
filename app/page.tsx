@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import RecordButton from "@/components/RecordButton";
+import AudioRecorderButton from "@/components/AudioRecorderButton";
 import Chat from "@/components/Chat";
 
 export default function Home() {
@@ -71,7 +71,7 @@ export default function Home() {
         )}
       </main>
       <footer className="p-4">
-        <RecordButton
+        <AudioRecorderButton
           recording={recording}
           setRecording={setRecording}
           onProcessAudio={handleAudioProcessing}
