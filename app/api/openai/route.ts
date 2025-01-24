@@ -29,14 +29,15 @@ export async function POST(request: NextRequest) {
                 { status: 400 }
             );
         }
+        
+        const file = audioFile as File;
+        const buffer = await file.arrayBuffer();
+        const processedFile = new File([buffer], file.name, { type: file.type });
 
-        // Convert FormData file to a Node.js File-like object
-        const buffer = await (audioFile as File).arrayBuffer();
-        const file = new File([buffer], 'audio.wav', { type: 'audio/wav' });
-
+        console.log(processedFile)
         // 1. Transcribe audio to text
         const transcription = await openai.audio.transcriptions.create({
-            file: file,
+            file: processedFile,
             model: 'whisper-1',
         }) as TranscriptionResponse;
 
