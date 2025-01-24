@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
             model: 'whisper-1',
         }) as TranscriptionResponse;
 
+        console.log(transcription.text)
         // 2. Translate the text
         const translation = await openai.chat.completions.create({
             model: 'gpt-4o-mini',
@@ -49,7 +50,8 @@ export async function POST(request: NextRequest) {
                 { role: 'user', content: transcription.text },
             ],
         }) as TranslationResponse;
-
+        console.log(translation.choices[0]?.message?.content)
+        
         return NextResponse.json({
             transcription: transcription.text,
             translation: translation.choices[0]?.message?.content,
