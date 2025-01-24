@@ -10,36 +10,40 @@ export default function Home() {
   const [recording, setRecording] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [audioFormat, setAudioFormat] = useState<string>("");
+  const [dynamicp, setDynamicp] = useState<string | null>(null); 
 
   const handleAudioProcessing = async (audioBlob: Blob) => {
     try {
-      // Create a new blob with explicit type
-      const audioFile = new Blob([audioBlob], { type: "audio/webm" });
-      setAudioUrl(URL.createObjectURL(audioFile));
-      setAudioFormat(audioFile.type.split("/")[1]); // Extract format (e.g., "webm")
+      // Use the original blob directly (already contains correct MIME type)
+      setAudioUrl(URL.createObjectURL(audioBlob));
+      setAudioFormat(audioBlob.type.split("/")[1]); // Extract actual format
+
+      setDynamicp(audioBlob.type)
 
       const formData = new FormData();
-      formData.append("audioData", audioFile, "audio.webm");
-
-      console.log("Sending audio file:", audioFile);
-
+      // Use dynamic file extension based on actual MIME type
+      const extension = audioBlob.type.split("/")[1]?.split(";")[0] || 'webm';
+      formData.append("audioData", audioBlob, `audio.${extension}`);
+  
+      console.log("Sending audio file:", audioBlob);
+  
       const response = await fetch("/api/openai", {
         method: "POST",
         body: formData,
       });
-
+  
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         console.error("Server response:", errorData);
         throw new Error(`Failed to process audio: ${response.status}`);
       }
-
+  
       const data = await response.json();
-
+  
       if (!data.transcription || !data.translation) {
         throw new Error("Invalid response format");
       }
-
+  
       setChat((prevChat) => [
         ...prevChat,
         { user: "A", message: data.transcription, language: "en" },
@@ -47,7 +51,7 @@ export default function Home() {
       ]);
     } catch (error) {
       console.error("Error processing audio:", error);
-      // You might want to show an error message to the user here
+      // Consider adding error state handling here
     }
   };
 
@@ -70,6 +74,7 @@ export default function Home() {
           </div>
         )}
       </main>
+      <p>dinamyc p:{dynamicp}</p>
       <footer className="p-4">
         <AudioRecorderButton
           recording={recording}
