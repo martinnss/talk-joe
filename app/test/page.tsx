@@ -18,12 +18,8 @@ export default function AudioRecorder() {
 
   useEffect(() => {
     return () => {
-      if (timerInterval.current) {
-        clearInterval(timerInterval.current);
-      }
-      if (mediaRecorder.current && mediaRecorder.current.state === 'recording') {
-        mediaRecorder.current.stop();
-      }
+      if (timerInterval.current) clearInterval(timerInterval.current);
+      if (mediaRecorder.current?.state === 'recording') mediaRecorder.current.stop();
     };
   }, []);
 
@@ -32,9 +28,8 @@ export default function AudioRecorder() {
       const elapsed = Date.now() - startTime.current;
       const seconds = Math.floor(elapsed / 1000);
       const minutes = Math.floor(seconds / 60);
-      const remainingSeconds = seconds % 60;
       setTimer(
-        `${minutes.toString().padStart(2, '0')}:${remainingSeconds
+        `${minutes.toString().padStart(2, '0')}:${(seconds % 60)
           .toString()
           .padStart(2, '0')}`
       );
@@ -47,26 +42,18 @@ export default function AudioRecorder() {
       audioChunks.current = [];
       setIsPlaying(false);
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
-      });
-
-      mediaRecorder.current = new MediaRecorder(stream, {
-        mimeType: 'audio/webm;codecs=opus',
-      });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      
+      // Use browser's default MIME type
+      mediaRecorder.current = new MediaRecorder(stream);
 
       mediaRecorder.current.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunks.current.push(event.data);
-        }
+        if (event.data.size > 0) audioChunks.current.push(event.data);
       };
 
       mediaRecorder.current.onstop = () => {
-        const audioBlob = new Blob(audioChunks.current, { type: 'audio/webm' });
+        const mimeType = mediaRecorder.current?.mimeType || 'audio/webm';
+        const audioBlob = new Blob(audioChunks.current, { type: mimeType });
         const url = URL.createObjectURL(audioBlob);
         setAudioURL(url);
         setStatus('Recording saved');
@@ -79,18 +66,16 @@ export default function AudioRecorder() {
       setStatus('Recording...');
     } catch (error) {
       console.error('Error accessing microphone:', error);
-      setStatus('Error accessing microphone. Please check permissions.');
+      setStatus('Microphone access denied. Enable permissions in settings.');
     }
   };
 
   const stopRecording = () => {
-    if (mediaRecorder.current && mediaRecorder.current.state === 'recording') {
+    if (mediaRecorder.current?.state === 'recording') {
       mediaRecorder.current.stop();
-      if (timerInterval.current) {
-        clearInterval(timerInterval.current);
-      }
+      if (timerInterval.current) clearInterval(timerInterval.current);
       setIsRecording(false);
-      mediaRecorder.current.stream.getTracks().forEach((track) => track.stop());
+      mediaRecorder.current.stream.getTracks().forEach(track => track.stop());
     }
   };
 
@@ -98,24 +83,17 @@ export default function AudioRecorder() {
     if (audioPlayer.current) {
       if (isPlaying) {
         audioPlayer.current.pause();
-        setIsPlaying(false);
       } else {
         audioPlayer.current.play();
-        setIsPlaying(true);
       }
+      setIsPlaying(!isPlaying);
     }
-  };
-
-  const handleAudioEnded = () => {
-    setIsPlaying(false);
   };
 
   return (
     <div className="flex flex-col items-center justify-center p-6 max-w-md mx-auto bg-white rounded-xl shadow-md">
       <div className="text-3xl font-bold mb-4">Audio Recorder</div>
-      
       <div className="text-2xl font-mono mb-4">{timer}</div>
-      
       <div className="text-sm text-gray-600 mb-4">{status}</div>
       
       <div className="flex gap-4 mb-6">
@@ -142,17 +120,8 @@ export default function AudioRecorder() {
             onClick={handlePlayback}
             className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
           >
-            {isPlaying ? (
-              <>
-                <Pause className="w-5 h-5" />
-                Pause
-              </>
-            ) : (
-              <>
-                <Play className="w-5 h-5" />
-                Play
-              </>
-            )}
+            {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+            {isPlaying ? 'Pause' : 'Play'}
           </button>
         )}
       </div>
@@ -161,7 +130,7 @@ export default function AudioRecorder() {
         <audio 
           ref={audioPlayer}
           src={audioURL}
-          onEnded={handleAudioEnded}
+          onEnded={() => setIsPlaying(false)}
           className="hidden"
         />
       )}
