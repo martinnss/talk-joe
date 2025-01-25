@@ -1,9 +1,9 @@
 "use client";
-import { useState, useRef, useEffect } from 'react';
-import { Volume2, VolumeX } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import {  Volume2, VolumeX } from 'lucide-react';
 
 interface ChatProps {
-  chat: { user: "A" | "B"; message: string; language: string }[];
+  chat: { user: "A" | "B"; message: string }[];
 }
 
 // Add proper types for WebKit AudioContext
@@ -13,78 +13,94 @@ interface WebKitWindow extends Window {
 
 const Chat: React.FC<ChatProps> = ({ chat }) => {
   const [playingMessageId, setPlayingMessageId] = useState<number | null>(null);
+  const [audioReady, setAudioReady] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioContext = useRef<AudioContext | null>(null);
+  const prevChatLength = useRef(chat.length);
 
-  // Initialize AudioContext on first user interaction
+  // Audio context initialization with silent warm-up
   useEffect(() => {
-    const initAudioContext = () => {
-      if (!audioContext.current) {
-        const AudioContextConstructor = 
-          window.AudioContext || (window as unknown as WebKitWindow).webkitAudioContext;
-        audioContext.current = new AudioContextConstructor();
-      }
-      // Remove the event listeners after first interaction
-      document.removeEventListener('touchstart', initAudioContext);
-      document.removeEventListener('click', initAudioContext);
+    const initAudio = async () => {
+      const AudioContextConstructor = 
+        window.AudioContext || (window as unknown as WebKitWindow).webkitAudioContext;
+      audioContext.current = new AudioContextConstructor();
+      
+      // Create silent oscillator to unlock audio
+      const oscillator = audioContext.current.createOscillator();
+      const gainNode = audioContext.current.createGain();
+      gainNode.gain.value = 0;
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.current.destination);
+      oscillator.start();
+      await new Promise(resolve => setTimeout(resolve, 100));
+      oscillator.stop();
+      
+      setAudioReady(true);
     };
 
-    document.addEventListener('touchstart', initAudioContext);
-    document.addEventListener('click', initAudioContext);
+    const handleFirstInteraction = async () => {
+      if (!audioContext.current) {
+        await initAudio();
+        document.removeEventListener('click', handleFirstInteraction);
+        document.removeEventListener('touchstart', handleFirstInteraction);
+      }
+    };
+
+    document.addEventListener('click', handleFirstInteraction);
+    document.addEventListener('touchstart', handleFirstInteraction);
 
     return () => {
-      document.removeEventListener('touchstart', initAudioContext);
-      document.removeEventListener('click', initAudioContext);
+      document.removeEventListener('click', handleFirstInteraction);
+      document.removeEventListener('touchstart', handleFirstInteraction);
     };
   }, []);
 
-  const stopCurrentAudio = () => {
+  // Automatic speech handling
+  useEffect(() => {
+    if (!audioReady) return;
+
+    const newMessages = chat.slice(prevChatLength.current);
+    const lastBMessage = newMessages.reverse().find(m => m.user === 'B');
+
+    if (lastBMessage) {
+      const messageIndex = chat.indexOf(lastBMessage);
+      handleSpeak(lastBMessage.message, messageIndex);
+    }
+
+    prevChatLength.current = chat.length;
+  }, [chat, audioReady]);
+
+  const stopCurrentAudio = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
       setPlayingMessageId(null);
     }
-  };
+  }, []);
 
-  const handleSpeak = async (text: string, messageId: number) => {
+  const handleSpeak = useCallback(async (text: string, messageId: number) => {
     try {
-      // If the same message is playing, stop it
-      if (playingMessageId === messageId) {
-        stopCurrentAudio();
-        return;
-      }
-
-      // Stop any currently playing audio
       stopCurrentAudio();
 
       const response = await fetch('/api/tts', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text,
-          voice: 'nova'
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, voice: 'nova' }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to generate speech');
-      }
+      if (!response.ok) throw new Error('TTS failed');
 
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
 
-      // Clean up previous audio element
       if (audioRef.current) {
         URL.revokeObjectURL(audioRef.current.src);
+        audioRef.current.pause();
       }
 
-      // Create new audio element
       const audio = new Audio(audioUrl);
       audioRef.current = audio;
 
-      // Set up audio event handlers
       audio.onplay = () => setPlayingMessageId(messageId);
       audio.onended = () => {
         setPlayingMessageId(null);
@@ -93,46 +109,52 @@ const Chat: React.FC<ChatProps> = ({ chat }) => {
       audio.onerror = () => {
         setPlayingMessageId(null);
         URL.revokeObjectURL(audioUrl);
-        console.error('Audio playback error');
       };
 
-      // iOS requires user interaction to play audio
-      try {
-        // Resume AudioContext if it was suspended
-        if (audioContext.current?.state === 'suspended') {
-          await audioContext.current.resume();
-        }
-        await audio.play();
-      } catch (playError) {
-        console.error('Playback error:', playError);
-        setPlayingMessageId(null);
+      // Critical iOS audio play fix
+      if (audioContext.current?.state === 'suspended') {
+        await audioContext.current.resume();
       }
+      
+      // Force play through user gesture
+      await audio.play().catch(async (error) => {
+        if (error.name === 'NotAllowedError') {
+          await audioContext.current?.resume();
+          await audio.play();
+        }
+      });
     } catch (error) {
-      console.error('Error playing audio:', error);
+      console.error('Playback failed:', error);
       setPlayingMessageId(null);
     }
-  };
+  }, [stopCurrentAudio]);
 
   return (
     <div className="space-y-4">
+      {
+        chat.length > 0 ? 
+          <div></div> :
+          <div className='flex justify-center items-center h-[75vh]'>
+            <span className='block text-center'>Hit <span className='text-blue-500 font-bold'>Start Recording</span> to unlock human connection✨</span>
+          </div>
+      }
       {chat.map((entry, index) => (
         <div
           key={index}
-          className={`p-4 rounded-lg ${
-            entry.user === "A" ? "bg-gray-200" : "bg-blue-200"
+          className={`p-4 rounded-2xl px-4 py-2 shadow-md ${
+            entry.user === "A" ? "bg-gray-100 ml-14" : "bg-gradient-to-r from-red-200 to-blue-200 mr-14"
           }`}
         >
           <div className="flex justify-between items-start">
-            <p className="text-sm text-gray-600">{entry.language}</p>
             <button
               onClick={() => handleSpeak(entry.message, index)}
               className="p-1 hover:bg-black/10 rounded transition-colors"
               aria-label={playingMessageId === index ? "Stop speaking" : "Speak message"}
             >
               {playingMessageId === index ? (
-                <VolumeX className="w-4 h-4 text-gray-600" />
+                <VolumeX className="w-4 h-4 text-gray-700" />
               ) : (
-                <Volume2 className="w-4 h-4 text-gray-600" />
+                <Volume2 className="w-4 h-4 text-gray-700" />
               )}
             </button>
           </div>

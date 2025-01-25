@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Talk Joe",
+  title: "Talk Joe - Translate everything",
   description: "Translate a conversation between two people with differents languages",
 };
 
@@ -25,9 +25,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        
       >
-        {children}
+        <div className="flex justify-center items-center min-h-screen w-screen">
+          <div className="w-full max-w-3xl">
+          {children}
+          </div>
+        </div>
       </body>
     </html>
   );
