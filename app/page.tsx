@@ -54,7 +54,8 @@ export default function Home() {
     // Check if the chat container is overflowing
     const checkOverflow = () => {
       if (chatContainerRef.current) {
-        const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { _scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
         setIsOverflowing(scrollHeight > clientHeight);
       }
     };
