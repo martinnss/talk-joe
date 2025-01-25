@@ -55,7 +55,7 @@ export default function Home() {
     const checkOverflow = () => {
       if (chatContainerRef.current) {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { _scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
+        const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
         setIsOverflowing(scrollHeight > clientHeight);
       }
     };
