@@ -139,7 +139,7 @@ const Chat: React.FC<ChatProps> = ({ chat }) => {
             entry.user === "A" ? "bg-gray-100 ml-14" : "bg-gradient-to-r from-red-200 to-blue-200 mr-14"
           }`}
         >
-          <div className="flex justify-between items-start">
+          <div className="flex justify-between items-start safe-area-inset-bottom">
             <button
               onClick={() => handleSpeak(entry.message, index)}
               className="p-1 hover:bg-black/10 rounded transition-colors"
