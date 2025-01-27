@@ -12,3 +12,9 @@ body {
     min-height: 100vh;
     margin: 0;
 }
+
+@supports (padding: max(0px)) {
+    .safe-area-inset-bottom {
+      padding-bottom: max(2rem, env(safe-area-inset-bottom));
+    }
+  }

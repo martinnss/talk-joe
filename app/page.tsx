@@ -88,36 +88,59 @@ export default function Home() {
       };
     }, [chat]);
   
-  return (
-    <div className="flex flex-col h-screen ">
-      <header className="flex justify-center pt-3 pb-3 shadow-lg">
-        <p className="text-4xl font-bold text-gray-800">
-          Talk 
-          <span className="bg-gradient-to-r from-red-500  to-blue-500 bg-clip-text text-transparent ">
-            Joe
-          </span>
-        </p>
-      </header>
-      <main className="flex-1 p-4 overflow-y-auto" ref={chatContainerRef}>
-        <Chat chat={chat} />
-      </main>
-      <footer className="p-4 pb-8">
-        {isOverflowing && (
-          <button
-            onClick={scrollToBottom}
-            className="fixed bottom-32 left-1/2 transform -translate-x-1/2  pl-1 pr-1 pb-1 bg-gray-500 bg-opacity-50 text-white rounded-full shadow-lg transition-colors"
-          >
-            ↓
-          </button>
-        )}
-        <AudioRecorderButton
-          recording={recording}
-          setRecording={setRecording}
-          onProcessAudio={handleAudioProcessing}
-        />
-      </footer>
-    </div>
-  );
+    return (
+      <div className="flex flex-col min-h-screen max-h-screen w-full bg-white">
+        <header className="sticky top-0 z-10 bg-white">
+          <div className="flex justify-center py-4 border-b">
+            <p className="text-3xl font-bold text-gray-800">
+              Talk
+              <span className="bg-gradient-to-r from-red-500 to-blue-500 bg-clip-text text-transparent">
+                Joe
+              </span>
+            </p>
+          </div>
+        </header>
+  
+        <main 
+          className="flex flex-col h-screen p-4" 
+          ref={chatContainerRef}
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
+          {chat.length === 0 ? (
+            <div className="flex-1 flex justify-center items-center">
+              <span className="text-center">
+                Hit  
+                <span className="text-blue-500 font-bold"> Start Recording </span>
+                to unlock human connection✨
+              </span>
+            </div>
+          ) : (
+            <div className="flex-1 overflow-y-auto overscroll-contain">
+              <Chat chat={chat} />
+            </div>
+          )}
+        </main>
+  
+        <footer className="sticky bottom-0 z-10 bg-white">
+          <div className="p-4 pb-8 safe-area-inset-bottom">
+            {isOverflowing && (
+              <button
+                onClick={scrollToBottom}
+                className="fixed bottom-28 left-1/2 transform -translate-x-1/2 p-2 bg-gray-500 bg-opacity-50 text-white rounded-full shadow-lg transition-colors"
+                style={{ transform: 'translate(-50%, 0)' }}
+              >
+                ↓
+              </button>
+            )}
+            <AudioRecorderButton
+              recording={recording}
+              setRecording={setRecording}
+              onProcessAudio={handleAudioProcessing}
+            />
+          </div>
+        </footer>
+      </div>
+    );
 }
 
 

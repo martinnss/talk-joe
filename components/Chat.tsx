@@ -130,14 +130,8 @@ const Chat: React.FC<ChatProps> = ({ chat }) => {
   }, [stopCurrentAudio]);
 
   return (
-    <div className="space-y-4">
-      {
-        chat.length > 0 ? 
-          <div></div> :
-          <div className='flex justify-center items-center h-[75vh]'>
-            <span className='block text-center'>Hit <span className='text-blue-500 font-bold'>Start Recording</span> to unlock human connection✨</span>
-          </div>
-      }
+    <div className="space-y-4  min-h-full">
+
       {chat.map((entry, index) => (
         <div
           key={index}
