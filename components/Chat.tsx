@@ -130,16 +130,16 @@ const Chat: React.FC<ChatProps> = ({ chat }) => {
   }, [stopCurrentAudio]);
 
   return (
-    <div className="space-y-4  min-h-full">
+    <div className="space-y-4  min-h-full mb-1">
 
       {chat.map((entry, index) => (
         <div
           key={index}
           className={`p-4 rounded-2xl px-4 py-2 shadow-md ${
-            entry.user === "A" ? "bg-gray-100 ml-14" : "bg-gradient-to-r from-red-200 to-blue-200 mr-14"
+            entry.user === "A" ? "bg-gray-100 ml-14" : "bg-gradient-to-r from-red-200 to-blue-200 mr-14 mb-4"
           }`}
         >
-          <div className="flex justify-between items-start safe-area-inset-bottom">
+          <div className="flex justify-between items-start ">
             <button
               onClick={() => handleSpeak(entry.message, index)}
               className="p-1 hover:bg-black/10 rounded transition-colors"

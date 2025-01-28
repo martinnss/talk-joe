@@ -102,7 +102,7 @@ export default function Home() {
         </header>
   
         <main 
-          className="flex flex-col h-screen p-4" 
+          className={`flex flex-col p-4 pb-2 ${chat.length === 0 ? "h-screen":"h-dvh"}` }
           ref={chatContainerRef}
           style={{ WebkitOverflowScrolling: 'touch' }}
         >
